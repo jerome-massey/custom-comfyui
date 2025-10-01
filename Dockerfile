@@ -25,7 +25,17 @@ WORKDIR ${COMFYUI_PATH}
 # Install ComfyUI dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE 8188
+# Install JupyterLab for container management and CLI access
+RUN pip install --no-cache-dir jupyterlab ipywidgets
 
-# Start ComfyUI server
-CMD ["python", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
+# Expose ports: 8188 for ComfyUI, 8888 for JupyterLab
+EXPOSE 8188 8888
+
+# Create startup script to run both ComfyUI and JupyterLab
+RUN echo '#!/bin/bash\n\
+jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token="" --NotebookApp.password="" &\n\
+python main.py --listen 0.0.0.0 --port 8188\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+# Start both services
+CMD ["/bin/bash", "/app/start.sh"]

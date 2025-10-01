@@ -5,7 +5,8 @@ services:
       context: .
       dockerfile: ./Dockerfile
     ports:
-      - "8188:8188"
+      - "8188:8188"  # ComfyUI web interface
+      - "8888:8888"  # JupyterLab interface
     volumes:
       # Mount entire ComfyUI directory for complete persistence
       - ./comfyui_data:/app/ComfyUI

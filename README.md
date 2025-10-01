@@ -64,6 +64,7 @@ custom-comfyui/
      --name comfyui `
      --gpus all `
      -p 8188:8188 `
+     -p 8888:8888 `
      -v ${PWD}/comfyui_data:/app/ComfyUI `
      --restart unless-stopped `
      custom-comfyui:latest
@@ -86,10 +87,25 @@ custom-comfyui/
 
 **First Run:** The container will automatically create the `comfyui_data/` directory and populate it with the ComfyUI installation.
 
-## Accessing ComfyUI
+## Accessing the Environment
 
-Once the container is running, access ComfyUI at:
+Once the container is running, you have two web interfaces available:
+
+### ComfyUI Web Interface
 - **URL:** http://localhost:8188
+- **Purpose:** Main ComfyUI workflow interface for creating and running AI workflows
+
+### JupyterLab Interface
+- **URL:** http://localhost:8888
+- **Purpose:** Container management, file browsing, terminal access, and Python notebooks
+- **Features:**
+  - **Terminal:** Click "+" → Terminal for full CLI access inside the container
+  - **File Browser:** Navigate and edit files in the ComfyUI directory
+  - **Notebooks:** Create Python notebooks for custom scripts and automation
+  - **Text Editor:** Edit configuration files, workflows, and custom nodes
+  - **Python Console:** Interactive Python REPL with access to all installed packages
+
+**No password required** - JupyterLab is configured for local development access.
 
 ## Adding Models
 
@@ -149,9 +165,19 @@ docker compose down
 docker compose up --build
 ```
 
-**Execute commands inside container:**
+**Execute commands inside container (CLI):**
 ```bash
 docker compose exec comfyui bash
+```
+
+**Or use JupyterLab Terminal:**
+- Navigate to http://localhost:8888
+- Click the "+" button in the sidebar
+- Select "Terminal"
+
+**Install packages inside container:**
+```bash
+docker compose exec comfyui pip install package-name
 ```
 
 ## GPU Support
