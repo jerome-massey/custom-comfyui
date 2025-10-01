@@ -25,16 +25,21 @@ WORKDIR ${COMFYUI_PATH}
 # Install ComfyUI dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install additional packages for model downloader script
+# Install additional packages for model downloader scripts and JupyterLab
 RUN pip install --no-cache-dir \
     requests \
-    tqdm \
     jupyterlab \
     ipywidgets
 
-# Copy the model downloader script
+# Copy both model downloader scripts
+# download_models.py - Original version with tqdm (requires: pip install tqdm)
+# download_models_portable.py - Portable version using curl (no tqdm needed)
 COPY download_models.py /usr/local/bin/download_models.py
-RUN chmod +x /usr/local/bin/download_models.py
+COPY download_models_portable.py /usr/local/bin/download_models_portable.py
+RUN chmod +x /usr/local/bin/download_models.py /usr/local/bin/download_models_portable.py
+
+# Create a symlink to use portable version by default
+RUN ln -sf /usr/local/bin/download_models_portable.py /usr/local/bin/download-models
 
 # Expose ports: 8188 for ComfyUI, 8888 for JupyterLab
 EXPOSE 8188 8888

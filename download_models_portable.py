@@ -1,23 +1,39 @@
 #!/usr/bin/env python3
 """
-ComfyUI Model Downloader
+ComfyUI Model Downloader (Portable Version)
 Downloads models to the models directory from one or more manifest files.
 Supports duplicate detection and manifest combining.
+Uses curl for performance, falls back to requests for compatibility.
+No tqdm dependency - uses native progress bars.
 """
 
 import os
 import sys
 import json
-import requests
 import hashlib
+import subprocess
+import shutil
 from pathlib import Path
 from urllib.parse import urlparse
-from tqdm import tqdm
 import argparse
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from collections import defaultdict
 
+# Try to import requests for manifest fetching and fallback downloads
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+    print("⚠️  Warning: 'requests' not installed. Will use curl for everything.")
+
 COMFYUI_PATH = os.environ.get('COMFYUI_PATH', '/app/ComfyUI')
+
+
+def has_curl() -> bool:
+    """Check if curl is available."""
+    return shutil.which('curl') is not None
+
 
 class ModelManifest:
     """Handles loading, combining, and deduplicating model manifests."""
@@ -26,14 +42,20 @@ class ModelManifest:
         self.models = []
         self.seen_models = {}  # Track by URL to detect duplicates
     
-    def load_manifest(self, source: str) -> Dict:
+    def load_manifest(self, source: str) -> Optional[Dict]:
         """Load manifest from URL or local file."""
         try:
             if source.startswith('http://') or source.startswith('https://'):
                 print(f"📥 Fetching manifest from: {source}")
-                response = requests.get(source, timeout=30)
-                response.raise_for_status()
-                return response.json()
+                
+                # Try curl first, then requests
+                if has_curl():
+                    return self._load_manifest_curl(source)
+                elif HAS_REQUESTS:
+                    return self._load_manifest_requests(source)
+                else:
+                    print(f"✗ No method available to fetch remote manifest")
+                    return None
             else:
                 print(f"📂 Loading manifest from: {source}")
                 with open(source, 'r') as f:
@@ -42,7 +64,34 @@ class ModelManifest:
             print(f"✗ Error loading manifest from {source}: {str(e)}")
             return None
     
-    def add_manifest(self, manifest: Dict, source: str) -> tuple:
+    def _load_manifest_curl(self, url: str) -> Optional[Dict]:
+        """Load manifest using curl."""
+        try:
+            result = subprocess.run(
+                ['curl', '-sS', '-L', '--max-time', '30', url],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return json.loads(result.stdout)
+        except subprocess.CalledProcessError as e:
+            print(f"✗ curl failed: {e.stderr}")
+            return None
+        except json.JSONDecodeError as e:
+            print(f"✗ Invalid JSON: {str(e)}")
+            return None
+    
+    def _load_manifest_requests(self, url: str) -> Optional[Dict]:
+        """Load manifest using requests."""
+        try:
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"✗ requests failed: {str(e)}")
+            return None
+    
+    def add_manifest(self, manifest: Dict, source: str) -> Tuple[int, int]:
         """Add a manifest, tracking duplicates."""
         if not manifest:
             return 0, 0
@@ -105,61 +154,121 @@ class ModelManifest:
         }
 
 
-def download_file(url: str, dest_path: Path, expected_hash: Optional[str] = None) -> bool:
-    """Download a file with progress bar and optional hash verification."""
+def download_with_curl(url: str, dest_path: Path) -> bool:
+    """Download file using curl with progress bar."""
     try:
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        cmd = [
+            'curl',
+            '-L',                    # Follow redirects
+            '-o', str(dest_path),    # Output file
+            '-#',                    # Progress bar (simple)
+            '--create-dirs',         # Create parent directories
+            '-C', '-',               # Resume if interrupted
+            '--max-time', '3600',    # 1 hour timeout
+            '--connect-timeout', '30',  # Connection timeout
+            url
+        ]
         
-        # Check if file already exists
-        if dest_path.exists():
-            if expected_hash:
-                print(f"  📄 File exists, verifying hash...")
-                if verify_hash(dest_path, expected_hash):
-                    print(f"  ✓ {dest_path.name} (hash verified, skipped)")
-                    return True
-                else:
-                    print(f"  ⚠ Hash mismatch, re-downloading...")
-            else:
-                print(f"  ✓ {dest_path.name} (already exists, skipped)")
-                return True
+        # Run curl and show its output directly
+        result = subprocess.run(cmd, check=True)
+        return result.returncode == 0
         
-        print(f"  ⬇ Downloading: {dest_path.name}")
-        
-        # Handle different URL schemes (direct download vs HTML pages)
+    except subprocess.CalledProcessError as e:
+        print(f"  ✗ curl failed with exit code {e.returncode}")
+        return False
+    except Exception as e:
+        print(f"  ✗ Error: {str(e)}")
+        return False
+
+
+def download_with_requests(url: str, dest_path: Path) -> bool:
+    """Download file using requests with ASCII progress bar."""
+    try:
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url, stream=True, timeout=30, headers=headers, allow_redirects=True)
         response.raise_for_status()
         
         total_size = int(response.headers.get('content-length', 0))
+        downloaded = 0
         
-        with open(dest_path, 'wb') as f, tqdm(
-            total=total_size,
-            unit='B',
-            unit_scale=True,
-            unit_divisor=1024,
-            desc=f"    ",
-            leave=False
-        ) as pbar:
+        with open(dest_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
-                size = f.write(chunk)
-                pbar.update(size)
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    
+                    # Show ASCII progress bar
+                    if total_size > 0:
+                        percent = (downloaded / total_size) * 100
+                        mb_down = downloaded / (1024 * 1024)
+                        mb_total = total_size / (1024 * 1024)
+                        bar_length = 40
+                        filled = int(bar_length * downloaded / total_size)
+                        bar = '█' * filled + '░' * (bar_length - filled)
+                        print(f'\r    [{bar}] {percent:.1f}% ({mb_down:.1f}/{mb_total:.1f} MB)', 
+                              end='', flush=True)
         
-        # Verify hash if provided
-        if expected_hash:
-            print(f"  🔍 Verifying hash...")
-            if not verify_hash(dest_path, expected_hash):
-                print(f"  ✗ Hash verification failed for {dest_path.name}")
-                dest_path.unlink()
-                return False
+        if total_size > 0:
+            print()  # New line after progress
         
-        print(f"  ✓ Downloaded: {dest_path.name}")
         return True
         
     except Exception as e:
-        print(f"  ✗ Error downloading {url}: {str(e)}")
+        print(f"  ✗ Error: {str(e)}")
+        return False
+
+
+def download_file(url: str, dest_path: Path, expected_hash: Optional[str] = None) -> bool:
+    """Download a file using the best available method."""
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Check if file already exists
+    if dest_path.exists():
+        if expected_hash:
+            print(f"  📄 File exists, verifying hash...")
+            if verify_hash(dest_path, expected_hash):
+                print(f"  ✓ {dest_path.name} (hash verified, skipped)")
+                return True
+            else:
+                print(f"  ⚠ Hash mismatch, re-downloading...")
+                dest_path.unlink()
+        else:
+            print(f"  ✓ {dest_path.name} (already exists, skipped)")
+            return True
+    
+    print(f"  ⬇ Downloading: {dest_path.name}")
+    
+    # Detect available download tools
+    curl_available = has_curl()
+    
+    success = False
+    
+    # Try methods in order of preference
+    if curl_available:
+        print(f"    Using: curl")
+        success = download_with_curl(url, dest_path)
+    elif HAS_REQUESTS:
+        print(f"    Using: Python requests")
+        success = download_with_requests(url, dest_path)
+    else:
+        print(f"  ✗ No download method available (need curl or requests)")
+        return False
+    
+    if not success:
         if dest_path.exists():
             dest_path.unlink()
         return False
+    
+    # Verify hash if provided
+    if expected_hash:
+        print(f"  🔍 Verifying hash...")
+        if not verify_hash(dest_path, expected_hash):
+            print(f"  ✗ Hash verification failed")
+            dest_path.unlink()
+            return False
+    
+    print(f"  ✓ Downloaded: {dest_path.name}")
+    return True
 
 
 def verify_hash(file_path: Path, expected_hash: str) -> bool:
@@ -171,7 +280,7 @@ def verify_hash(file_path: Path, expected_hash: str) -> bool:
     return sha256_hash.hexdigest() == expected_hash
 
 
-def download_models(manifest: Dict, types_filter: Optional[List[str]] = None, dry_run: bool = False) -> tuple:
+def download_models(manifest: Dict, types_filter: Optional[List[str]] = None, dry_run: bool = False) -> Tuple[int, int]:
     """Download all models from manifest."""
     models = manifest.get('models', [])
     
@@ -263,7 +372,7 @@ def list_manifest_contents(manifest: Dict) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Download ComfyUI models from one or more manifest files',
+        description='Download ComfyUI models from one or more manifest files (Portable Version)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -277,10 +386,16 @@ Examples:
   %(prog)s --list manifest.json
   
   # Download only specific model types
-  %(prog)s --types checkpoint lora manifest.json
+  %(prog)s --types checkpoints loras manifest.json
   
   # Dry run to see what would be downloaded
   %(prog)s --dry-run manifest.json
+
+Download Method Priority:
+  1. curl (preferred) - Best performance, native progress bar
+  2. requests (fallback) - Universal compatibility, ASCII progress bar
+  
+This version requires NO tqdm dependency!
         """
     )
     
@@ -299,11 +414,21 @@ Examples:
     
     args = parser.parse_args()
     
+    # Check available tools
+    curl_available = has_curl()
+    
     print(f"\n{'='*70}")
-    print(f"ComfyUI Model Downloader")
+    print(f"ComfyUI Model Downloader (Portable Version)")
     print(f"{'='*70}")
     print(f"ComfyUI Path: {COMFYUI_PATH}")
     print(f"Manifests: {len(args.manifests)}")
+    print(f"Download method: ", end='')
+    if curl_available:
+        print('curl (native progress bar)')
+    elif HAS_REQUESTS:
+        print('requests (ASCII progress bar)')
+    else:
+        print('NONE - installation required!')
     print(f"{'='*70}")
     
     # Load and combine manifests
