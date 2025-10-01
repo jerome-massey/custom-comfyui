@@ -9,7 +9,7 @@ services:
       - "8888:8888"  # JupyterLab interface
     volumes:
       # Mount entire ComfyUI directory for complete persistence
-      - ./comfyui_data:/app/ComfyUI
+      - comfyui_data:/app/ComfyUI
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
@@ -21,3 +21,6 @@ services:
               count: all
               capabilities: [gpu]
     restart: unless-stopped
+
+volumes:
+  comfyui_data:

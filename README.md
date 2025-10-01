@@ -65,7 +65,7 @@ custom-comfyui/
      --gpus all `
      -p 8188:8188 `
      -p 8888:8888 `
-     -v ${PWD}/comfyui_data:/app/ComfyUI `
+     -v comfyui_data:/app/ComfyUI `
      --restart unless-stopped `
      custom-comfyui:latest
    ```

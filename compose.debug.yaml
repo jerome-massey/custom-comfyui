@@ -10,15 +10,15 @@ services:
       - 5678:5678
     volumes:
       # Mount models directory
-      - ./models/checkpoints:/app/ComfyUI/models/checkpoints
-      - ./models:/app/ComfyUI/models
+      - comfyui_models_checkpoints:/app/ComfyUI/models/checkpoints
+      - comfyui_models:/app/ComfyUI/models
       # Mount input/output directories
-      - ./input:/app/ComfyUI/input
-      - ./output:/app/ComfyUI/output
+      - comfyui_input:/app/ComfyUI/input
+      - comfyui_output:/app/ComfyUI/output
       # Mount workflows
-      - ./workflows:/app/ComfyUI/user/default/workflows
+      - comfyui_workflows:/app/ComfyUI/user/default/workflows
       # Mount custom nodes
-      - ./custom_nodes:/app/ComfyUI/custom_nodes
+      - comfyui_custom_nodes:/app/ComfyUI/custom_nodes
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
@@ -29,3 +29,11 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+
+volumes:
+  comfyui_models_checkpoints:
+  comfyui_models:
+  comfyui_input:
+  comfyui_output:
+  comfyui_workflows:
+  comfyui_custom_nodes:
