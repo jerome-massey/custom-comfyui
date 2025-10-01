@@ -1,0 +1,112 @@
+{
+  "version": "1.0",
+  "description": "Example ComfyUI model manifest - Popular models for SDXL and Flux workflows",
+  "models": [
+    {
+      "name": "SDXL Base 1.0",
+      "type": "checkpoint",
+      "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors",
+      "path": "models/checkpoints",
+      "description": "Base SDXL 1.0 model from Stability AI",
+      "sha256": ""
+    },
+    {
+      "name": "SDXL Refiner 1.0",
+      "type": "checkpoint",
+      "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0/resolve/main/sd_xl_refiner_1.0.safetensors",
+      "path": "models/checkpoints",
+      "description": "SDXL refiner model for enhanced detail"
+    },
+    {
+      "name": "SDXL VAE",
+      "type": "vae",
+      "url": "https://huggingface.co/stabilityai/sdxl-vae/resolve/main/sdxl_vae.safetensors",
+      "path": "models/vae",
+      "description": "Improved VAE for SDXL"
+    },
+    {
+      "name": "Flux.1 Dev",
+      "type": "checkpoint",
+      "url": "https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/flux1-dev.safetensors",
+      "path": "models/checkpoints",
+      "description": "Flux.1 development model"
+    },
+    {
+      "name": "Flux.1 Schnell",
+      "type": "checkpoint",
+      "url": "https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/flux1-schnell.safetensors",
+      "path": "models/checkpoints",
+      "description": "Flux.1 fast inference model"
+    },
+    {
+      "name": "CLIP Vision Model",
+      "type": "clip",
+      "url": "https://huggingface.co/openai/clip-vit-large-patch14/resolve/main/pytorch_model.bin",
+      "path": "models/clip_vision",
+      "filename": "clip_vision_model.bin",
+      "description": "CLIP vision model for image understanding"
+    },
+    {
+      "name": "ControlNet Canny SDXL",
+      "type": "controlnet",
+      "url": "https://huggingface.co/diffusers/controlnet-canny-sdxl-1.0/resolve/main/diffusion_pytorch_model.safetensors",
+      "path": "models/controlnet",
+      "filename": "controlnet_canny_sdxl.safetensors",
+      "description": "ControlNet for edge detection with SDXL"
+    },
+    {
+      "name": "ControlNet Depth SDXL",
+      "type": "controlnet",
+      "url": "https://huggingface.co/diffusers/controlnet-depth-sdxl-1.0/resolve/main/diffusion_pytorch_model.safetensors",
+      "path": "models/controlnet",
+      "filename": "controlnet_depth_sdxl.safetensors",
+      "description": "ControlNet for depth maps with SDXL"
+    },
+    {
+      "name": "4x UltraSharp Upscaler",
+      "type": "upscale",
+      "url": "https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth",
+      "path": "models/upscale_models",
+      "description": "High quality 4x upscaling model"
+    },
+    {
+      "name": "RealESRGAN x4plus",
+      "type": "upscale",
+      "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+      "path": "models/upscale_models",
+      "description": "Popular 4x upscaling model"
+    }
+  ],
+  "custom_nodes": [
+    {
+      "name": "ComfyUI-Manager",
+      "repo": "https://github.com/ltdrdata/ComfyUI-Manager.git",
+      "path": "custom_nodes",
+      "description": "Essential node manager for installing and managing custom nodes"
+    },
+    {
+      "name": "ComfyUI-Impact-Pack",
+      "repo": "https://github.com/ltdrdata/ComfyUI-Impact-Pack.git",
+      "path": "custom_nodes",
+      "description": "Powerful workflow enhancement pack"
+    },
+    {
+      "name": "ComfyUI-KJNodes",
+      "repo": "https://github.com/kijai/ComfyUI-KJNodes.git",
+      "path": "custom_nodes",
+      "description": "Collection of useful utility nodes"
+    },
+    {
+      "name": "ComfyUI-Advanced-ControlNet",
+      "repo": "https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet.git",
+      "path": "custom_nodes",
+      "description": "Advanced ControlNet features"
+    },
+    {
+      "name": "ComfyUI-AnimateDiff-Evolved",
+      "repo": "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved.git",
+      "path": "custom_nodes",
+      "description": "AnimateDiff for video generation"
+    }
+  ]
+}

@@ -25,8 +25,16 @@ WORKDIR ${COMFYUI_PATH}
 # Install ComfyUI dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install JupyterLab for container management and CLI access
-RUN pip install --no-cache-dir jupyterlab ipywidgets
+# Install additional packages for model downloader script
+RUN pip install --no-cache-dir \
+    requests \
+    tqdm \
+    jupyterlab \
+    ipywidgets
+
+# Copy the model downloader script
+COPY download_models.py /usr/local/bin/download_models.py
+RUN chmod +x /usr/local/bin/download_models.py
 
 # Expose ports: 8188 for ComfyUI, 8888 for JupyterLab
 EXPOSE 8188 8888

@@ -14,23 +14,27 @@ This is a Docker container setup for ComfyUI, the powerful and modular visual AI
 custom-comfyui/
 ├── Dockerfile              # Container definition
 ├── compose.yaml           # Docker Compose configuration
-└── comfyui_data/          # All ComfyUI data (created on first run)
-    ├── models/            # AI models
-    │   ├── checkpoints/   # Stable Diffusion checkpoints
-    │   ├── vae/          # VAE models
-    │   ├── loras/        # LoRA models
-    │   ├── controlnet/   # ControlNet models
-    │   └── ...
-    ├── input/            # Input images
-    ├── output/           # Generated images
-    ├── custom_nodes/     # Custom node extensions
-    ├── user/             # User settings and workflows
-    │   └── default/
-    │       └── workflows/  # Saved workflows
-    └── ...
+├── compose.debug.yaml     # Debug configuration
+├── download_models.py     # Automated model downloader
+├── model-manifest.json    # Example model manifest
+└── [Docker Volumes]       # Data stored in Docker-managed volumes
+    └── comfyui_data/      # All ComfyUI data (created on first run)
+        ├── models/            # AI models
+        │   ├── checkpoints/   # Stable Diffusion checkpoints
+        │   ├── vae/          # VAE models
+        │   ├── loras/        # LoRA models
+        │   ├── controlnet/   # ControlNet models
+        │   └── ...
+        ├── input/            # Input images
+        ├── output/           # Generated images
+        ├── custom_nodes/     # Custom node extensions
+        ├── user/             # User settings and workflows
+        │   └── default/
+        │       └── workflows/  # Saved workflows
+        └── ...
 ```
 
-**Note:** The `comfyui_data/` directory is automatically created on first run and contains the entire ComfyUI installation with all your data.
+**Note:** This setup uses Docker named volumes (not bind mounts) for better performance and portability. The `comfyui_data` volume is automatically created on first run and contains the entire ComfyUI installation with all your data.
 
 ## Quick Start
 
@@ -85,7 +89,42 @@ custom-comfyui/
    docker rm comfyui
    ```
 
-**First Run:** The container will automatically create the `comfyui_data/` directory and populate it with the ComfyUI installation.
+**First Run:** The container will automatically create the `comfyui_data/` volume and populate it with the ComfyUI installation.
+
+## Quick Reference
+
+### Download Models Automatically
+
+```bash
+# Download from manifest (supports multiple manifests with auto-deduplication)
+docker compose exec comfyui python /usr/local/bin/download_models.py \
+  https://raw.githubusercontent.com/jerome-massey/custom-comfyui/main/model-manifest.json
+
+# List what would be downloaded
+docker compose exec comfyui python /usr/local/bin/download_models.py --list manifest.json
+
+# Download only specific types
+docker compose exec comfyui python /usr/local/bin/download_models.py --types checkpoint lora manifest.json
+```
+
+### Copy Files to Container
+
+```bash
+# Copy model file
+docker compose cp model.safetensors comfyui:/app/ComfyUI/models/checkpoints/
+
+# Copy directory
+docker compose cp models/ comfyui:/app/ComfyUI/models/
+```
+
+### Access Container Terminal
+
+```bash
+# Via docker exec
+docker compose exec comfyui bash
+
+# Or use JupyterLab Terminal at http://localhost:8888
+```
 
 ## Accessing the Environment
 
@@ -107,36 +146,177 @@ Once the container is running, you have two web interfaces available:
 
 **No password required** - JupyterLab is configured for local development access.
 
-## Adding Models
+## Adding Models and Files to the Container
 
-**Important:** Models must be added to the `comfyui_data/` directory after the first run.
+Since this setup uses Docker volumes (not bind mounts), there are several methods to add files.
 
-Place your Stable Diffusion models in the appropriate directories:
+### Method 1: Automated Download from Manifests (Recommended) 🚀
 
-1. **Checkpoints:** `comfyui_data/models/checkpoints/`
-   - SD 1.5, SDXL, SD3, Flux models (.safetensors, .ckpt)
-   - Example: `comfyui_data/models/checkpoints/sd_xl_base_1.0.safetensors`
+The container includes a powerful script that downloads models from manifest files. Manifests are JSON files that define what models and custom nodes to install.
 
-2. **VAE:** `comfyui_data/models/vae/`
-   - VAE models for better quality
+#### Basic Usage
 
-3. **LoRAs:** `comfyui_data/models/loras/`
-   - LoRA fine-tuning models
+```bash
+# Download from a single manifest (GitHub raw URL)
+docker compose exec comfyui python /usr/local/bin/download_models.py \
+  https://raw.githubusercontent.com/username/repo/main/model-manifest.json
 
-4. **ControlNet:** `comfyui_data/models/controlnet/`
-   - ControlNet models for guided generation
+# Download from multiple manifests (automatically combines and deduplicates)
+docker compose exec comfyui python /usr/local/bin/download_models.py \
+  https://example.com/manifest1.json \
+  https://example.com/manifest2.json \
+  /path/to/local-manifest.json
+
+# Use the included example manifest
+docker compose exec comfyui python /usr/local/bin/download_models.py \
+  https://raw.githubusercontent.com/jerome-massey/custom-comfyui/main/model-manifest.json
+```
+
+#### Advanced Options
+
+```bash
+# List what would be downloaded without downloading (dry run)
+docker compose exec comfyui python /usr/local/bin/download_models.py --list manifest.json
+
+# See what would be downloaded
+docker compose exec comfyui python /usr/local/bin/download_models.py --dry-run manifest.json
+
+# Download only specific model types
+docker compose exec comfyui python /usr/local/bin/download_models.py \
+  --types checkpoint lora vae \
+  manifest.json
+
+# Download only models (skip custom nodes)
+docker compose exec comfyui python /usr/local/bin/download_models.py --models-only manifest.json
+
+# Install only custom nodes (skip models)
+docker compose exec comfyui python /usr/local/bin/download_models.py --nodes-only manifest.json
+```
+
+#### Creating Your Own Manifest
+
+Create a JSON file with your models and custom nodes:
+
+```json
+{
+  "version": "1.0",
+  "description": "My custom ComfyUI setup",
+  "models": [
+    {
+      "name": "SDXL Base 1.0",
+      "type": "checkpoint",
+      "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors",
+      "path": "models/checkpoints",
+      "filename": "sd_xl_base_1.0.safetensors",
+      "sha256": "optional-hash-for-verification"
+    }
+  ],
+  "custom_nodes": [
+    {
+      "name": "ComfyUI-Manager",
+      "repo": "https://github.com/ltdrdata/ComfyUI-Manager.git",
+      "path": "custom_nodes"
+    }
+  ]
+}
+```
+
+**Manifest Fields:**
+- `name`: Display name
+- `type`: Model type (`checkpoint`, `vae`, `lora`, `controlnet`, `upscale`, `embeddings`, `clip`)
+- `url`: Direct download URL (Hugging Face, GitHub releases, etc.)
+- `path`: Destination folder relative to ComfyUI root
+- `filename`: (Optional) Override filename
+- `sha256`: (Optional) Hash for verification
+- `repo`: Git repository URL for custom nodes
+
+**Where to Host Manifests:**
+- GitHub repository (use raw URL)
+- GitHub Gist
+- Any web server
+- Local file (copy to container first)
+
+See [model-manifest.json](model-manifest.json) for a complete example.
+
+### Method 2: JupyterLab Upload (For Small Files)
+
+1. Access http://localhost:8888
+2. Navigate to the desired folder in the file browser
+3. Click the upload button (↑) or drag & drop files
+
+### Method 3: Docker Copy Command
+
+```bash
+# Copy single files
+docker compose cp /path/to/model.safetensors comfyui:/app/ComfyUI/models/checkpoints/
+
+# Copy entire directories
+docker compose cp /path/to/models/ comfyui:/app/ComfyUI/models/
+```
+
+### Method 4: Download Directly in Container
+
+```bash
+# Using JupyterLab Terminal (http://localhost:8888)
+cd /app/ComfyUI/models/checkpoints
+wget https://example.com/model.safetensors
+
+# Or using docker exec
+docker compose exec comfyui wget -P /app/ComfyUI/models/checkpoints/ \
+  https://example.com/model.safetensors
+```
+
+### Method 5: Git Clone Custom Nodes
+
+```bash
+# Via JupyterLab Terminal
+cd /app/ComfyUI/custom_nodes
+git clone https://github.com/user/custom-node.git
+
+# Or via docker exec
+docker compose exec comfyui git clone \
+  https://github.com/user/custom-node.git \
+  /app/ComfyUI/custom_nodes/custom-node
+```
+
+### Model Directory Structure
+
+```
+models/
+├── checkpoints/     # SD 1.5, SDXL, SD3, Flux models (.safetensors, .ckpt)
+├── vae/            # VAE models
+├── loras/          # LoRA models
+├── controlnet/     # ControlNet models
+├── upscale_models/ # Upscaling models
+├── embeddings/     # Textual inversion embeddings
+└── clip_vision/    # CLIP vision models
+```
 
 **Note:** You can add/remove models while the container is running. ComfyUI will detect them automatically or after a browser refresh.
 
 ## Installing Custom Nodes
 
-1. Place custom node folders in `comfyui_data/custom_nodes/`
-2. Restart the container:
+**Recommended Method:** Use the automated manifest download (see "Method 1" above) to install custom nodes via git repositories.
+
+**Alternative Methods:**
+
+1. **Via Manifest Script:**
    ```bash
-   docker compose restart
+   docker compose exec comfyui python /usr/local/bin/download_models.py --nodes-only manifest.json
    ```
 
-**Alternative:** Use ComfyUI Manager (if installed) to install custom nodes directly from the web interface.
+2. **Manual Git Clone:**
+   ```bash
+   docker compose exec comfyui git clone https://github.com/user/custom-node.git \
+     /app/ComfyUI/custom_nodes/custom-node
+   ```
+
+3. **ComfyUI Manager:** Use ComfyUI Manager (if installed) to install custom nodes directly from the web interface.
+
+After installing custom nodes, restart the container:
+```bash
+docker compose restart
+```
 
 ## Environment Variables
 

@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "description": "Minimal ComfyUI starter pack - Essential models only",
+  "models": [
+    {
+      "name": "SDXL Base 1.0",
+      "type": "checkpoint",
+      "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors",
+      "path": "models/checkpoints",
+      "description": "Base SDXL 1.0 model from Stability AI"
+    },
+    {
+      "name": "SDXL VAE",
+      "type": "vae",
+      "url": "https://huggingface.co/stabilityai/sdxl-vae/resolve/main/sdxl_vae.safetensors",
+      "path": "models/vae",
+      "description": "Improved VAE for SDXL"
+    }
+  ],
+  "custom_nodes": [
+    {
+      "name": "ComfyUI-Manager",
+      "repo": "https://github.com/ltdrdata/ComfyUI-Manager.git",
+      "path": "custom_nodes",
+      "description": "Essential node manager for installing and managing custom nodes"
+    }
+  ]
+}
