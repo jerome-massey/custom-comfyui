@@ -28,18 +28,20 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install additional packages for model downloader scripts and JupyterLab
 RUN pip install --no-cache-dir \
     requests \
+    tqdm \
     jupyterlab \
     ipywidgets
 
-# Copy both model downloader scripts
-# download_models.py - Original version with tqdm (requires: pip install tqdm)
-# download_models_portable.py - Portable version using curl (no tqdm needed)
+# Copy both model downloader scripts and make them executable
+# These scripts are placed in /usr/local/bin/ for native command execution
 COPY download_models.py /usr/local/bin/download_models.py
 COPY download_models_portable.py /usr/local/bin/download_models_portable.py
 RUN chmod +x /usr/local/bin/download_models.py /usr/local/bin/download_models_portable.py
 
-# Create a symlink to use portable version by default
-RUN ln -sf /usr/local/bin/download_models_portable.py /usr/local/bin/download-models
+# Create symlinks for easier invocation (no .py extension needed)
+RUN ln -sf /usr/local/bin/download_models_portable.py /usr/local/bin/download-models && \
+    ln -sf /usr/local/bin/download_models.py /usr/local/bin/download-models-original && \
+    ln -sf /usr/local/bin/download_models_portable.py /usr/local/bin/download-models-portable
 
 # Expose ports: 8188 for ComfyUI, 8888 for JupyterLab
 EXPOSE 8188 8888
