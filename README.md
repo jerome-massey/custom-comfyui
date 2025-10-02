@@ -10,6 +10,7 @@ docker compose up -d
 
 # Access ComfyUI at: http://localhost:8188
 # Access JupyterLab at: http://localhost:8888
+# ComfyUI-Manager is pre-installed and accessible via the ComfyUI interface
 
 # Download models (uses portable script by default)
 docker compose exec comfyui download-models model-manifest.json
@@ -27,6 +28,15 @@ docker compose exec comfyui download-models model-manifest.json
 - [Model Types and Folders](#model-types-and-folders)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
+
+## Features
+
+- 🎨 **ComfyUI** - Latest version from official repository
+- 🔧 **ComfyUI-Manager** - Pre-installed for easy custom node management
+- 🚀 **Automated Model Downloader** - Download models from manifest files
+- 📊 **JupyterLab** - Built-in file browser and terminal access
+- 🐳 **Docker Volumes** - Persistent storage for models and workflows
+- ⚡ **GPU Support** - Full CUDA acceleration
 
 ## Prerequisites
 
@@ -214,6 +224,20 @@ docker compose exec comfyui download-models \
 - **Text Editor:** Edit configs, workflows, and scripts
 - **Notebooks:** Create Python notebooks for automation
 
+### ComfyUI-Manager Interface
+
+- **Access:** Click the "Manager" button in the ComfyUI interface
+- **Purpose:** Install and manage custom nodes, models, and extensions
+- **Pre-installed** - No additional setup required
+
+**ComfyUI-Manager Features:**
+
+- **Custom Nodes:** Browse and install custom nodes from the community
+- **Model Manager:** Download and manage AI models
+- **Update Manager:** Update ComfyUI and installed custom nodes
+- **Snapshot System:** Save and restore your ComfyUI configuration
+- **Missing Nodes:** Auto-detect and install missing nodes from workflows
+
 ## Managing Files and Models
 
 ### Method 1: Automated Download (Recommended) 🚀
@@ -279,6 +303,25 @@ After installing custom nodes, restart:
 ```bash
 docker compose restart
 ```
+
+### Method 6: Using ComfyUI-Manager (Easiest) 🌟
+
+**ComfyUI-Manager is pre-installed** and provides the easiest way to manage custom nodes:
+
+1. Open ComfyUI at <http://localhost:8188>
+2. Click the **"Manager"** button in the interface
+3. Select **"Install Custom Nodes"**
+4. Browse or search for the nodes you want
+5. Click **"Install"** and the Manager handles everything
+6. Restart ComfyUI when prompted
+
+**Manager Advantages:**
+
+- ✅ No command line needed
+- ✅ Automatic dependency installation
+- ✅ Built-in search and filtering
+- ✅ Shows node descriptions and compatibility
+- ✅ One-click updates for all nodes
 
 ## Manifest Format Reference
 
@@ -749,6 +792,7 @@ docker compose up -d
 
 - **ComfyUI GitHub:** <https://github.com/comfyanonymous/ComfyUI>
 - **ComfyUI Examples:** <https://comfyanonymous.github.io/ComfyUI_examples/>
+- **ComfyUI-Manager GitHub:** <https://github.com/Comfy-Org/ComfyUI-Manager>
 - **NVIDIA Container Toolkit:** <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/>
 - **Docker Compose Docs:** <https://docs.docker.com/compose/>
 

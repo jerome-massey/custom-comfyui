@@ -25,6 +25,10 @@ WORKDIR ${COMFYUI_PATH}
 # Install ComfyUI dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install ComfyUI-Manager in the custom_nodes directory
+RUN git clone https://github.com/Comfy-Org/ComfyUI-Manager.git ./custom_nodes/ComfyUI-Manager && \
+    pip install --no-cache-dir -r ./custom_nodes/ComfyUI-Manager/requirements.txt
+
 # Install additional packages for model downloader scripts and JupyterLab
 RUN pip install --no-cache-dir \
     requests \
