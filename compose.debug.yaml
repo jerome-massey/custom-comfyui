@@ -4,21 +4,15 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-    command: ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 main.py --listen 0.0.0.0 --port 8188"]
+    command: ["sh", "-c", "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' > /tmp/jupyter.log 2>&1 & pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 main.py --listen 0.0.0.0 --port 8188"]
     ports:
       - 8188:8188
+      - 8888:8888
       - 5678:5678
     volumes:
-      # Mount models directory
-      - comfyui_models_checkpoints:/app/ComfyUI/models/checkpoints
-      - comfyui_models:/app/ComfyUI/models
-      # Mount input/output directories
-      - comfyui_input:/app/ComfyUI/input
-      - comfyui_output:/app/ComfyUI/output
-      # Mount workflows
-      - comfyui_workflows:/app/ComfyUI/user/default/workflows
-      # Mount custom nodes
-      - comfyui_custom_nodes:/app/ComfyUI/custom_nodes
+      # Bind mount for live code editing and debugging
+      # Create a 'comfyui-data' directory in your project to use this
+      - ./comfyui-data:/app/ComfyUI
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
@@ -30,10 +24,4 @@ services:
               count: all
               capabilities: [gpu]
 
-volumes:
-  comfyui_models_checkpoints:
-  comfyui_models:
-  comfyui_input:
-  comfyui_output:
-  comfyui_workflows:
-  comfyui_custom_nodes:
+# No named volumes needed for debug mode - using bind mount instead

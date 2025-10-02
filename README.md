@@ -284,7 +284,49 @@ docker compose restart
 
 Create JSON manifest files to define models for automated downloading.
 
-### Complete Manifest Example
+### Field Requirements
+
+**Required Fields:**
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `url` | string | Direct download URL | `"https://huggingface.co/..."` |
+
+**That's it!** Only `url` is truly required. All other fields have sensible defaults.
+
+**Highly Recommended Fields:**
+
+| Field | Type | Default if Missing | Example |
+|-------|------|-------------------|---------|
+| `name` | string | `"Unknown"` | `"SDXL Base 1.0"` |
+| `type` | string | `"unknown"` | `"checkpoints"` |
+| `path` | string | `"models/checkpoints"` | `"models/checkpoints"` |
+
+**Optional Fields:**
+
+| Field | Type | Behavior if Missing | Example |
+|-------|------|---------------------|---------|
+| `sha256` | string | No verification | `"31e35c80fc..."` |
+| `description` | string | Not displayed | `"Base SDXL model"` |
+| `filename` | string | Extracted from URL | `"my_model.safetensors"` |
+
+### Manifest Examples
+
+**Minimal Valid Manifest:**
+
+```json
+{
+  "models": [
+    {
+      "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors"
+    }
+  ]
+}
+```
+
+This will download to `models/checkpoints/` with filename from URL, showing as `[unknown] Unknown`.
+
+**Recommended Complete Manifest:**
 
 ```json
 {
@@ -296,7 +338,6 @@ Create JSON manifest files to define models for automated downloading.
       "type": "checkpoints",
       "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors",
       "path": "models/checkpoints",
-      "filename": "sd_xl_base_1.0.safetensors",
       "sha256": "31e35c80fc4829d14f90153f4c74cd59c90b779f6afe05a74cd6120b893f7e5b",
       "description": "Stable Diffusion XL base model"
     },
@@ -305,30 +346,43 @@ Create JSON manifest files to define models for automated downloading.
       "type": "vae",
       "url": "https://huggingface.co/stabilityai/sdxl-vae/resolve/main/sdxl_vae.safetensors",
       "path": "models/vae",
-      "sha256": "235745af8d86bf4a4c1b5b4f529868b37019a10f7c0b2e79ad0bc8a3d25f0eef"
+      "description": "Improved VAE for SDXL"
     }
   ]
 }
 ```
 
-### Manifest Fields
+### SHA256 Hash Verification
 
-**Required Fields:**
+**With SHA256 (recommended for large/critical models):**
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| `name` | Display name for the model | `"SDXL Base 1.0"` |
-| `type` | Model type (see table below) | `"checkpoints"` |
-| `url` | Direct download URL | `"https://..."` |
-| `path` | Destination folder relative to ComfyUI | `"models/checkpoints"` |
+- ✅ Verifies file integrity after download
+- ✅ Skips re-download if file exists and hash matches
+- ⚠️ Re-downloads if hash doesn't match
 
-**Optional Fields:**
+**Without SHA256 (good for testing/frequently updated models):**
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| `filename` | Override filename (defaults to URL filename) | `"my_model.safetensors"` |
-| `sha256` | SHA256 hash for verification | `"31e35c80fc..."` |
-| `description` | Human-readable description | `"Base SDXL model"` |
+- ⚠️ No verification (assumes download is good)
+- ✅ Skips if file exists (based on filename only)
+- ⚠️ Won't detect corrupted downloads
+
+### Script Compatibility
+
+Both `download_models.py` and `download_models_portable.py` work with any manifest format:
+
+- ✅ Both included example manifests (`model-manifest.json` and `model-manifest-minimal.json`)
+- ✅ Manifests with or without optional fields
+- ✅ Mix of models with different field combinations in the same file
+
+```python
+# How scripts handle missing fields:
+name = model.get('name', 'Unknown')              # Falls back to "Unknown"
+url = model.get('url')                           # Required (fails gracefully if missing)
+path = model.get('path', 'models/checkpoints')   # Default path
+sha256 = model.get('sha256')                     # None = skip verification
+type = model.get('type', 'unknown')              # Falls back to "unknown"
+filename = model.get('filename')                 # None = extract from URL
+```
 
 ### Hosting Manifests
 
@@ -355,6 +409,30 @@ docker compose exec comfyui download-models \
 - Models are identified by their URL (case-insensitive)
 - First occurrence wins, subsequent duplicates are skipped
 - Console shows which manifest a duplicate was already loaded from
+
+### Best Practices
+
+1. **Include `sha256` for models >1GB** - Large files are more likely to get corrupted during download
+2. **Always include `name` and `type`** - Makes debugging and filtering much easier
+3. **Use descriptive `description`** - Helps when listing with `--list`
+4. **Keep `path` consistent** - Use ComfyUI's standard directories
+5. **Test without hash first** - Add `sha256` after confirming downloads work
+6. **Use `model-manifest.json` as template** - For production manifests
+7. **Use `model-manifest-minimal.json` for testing** - Faster to set up
+
+### Manifest FAQ
+
+**Q: Can I mix models with and without SHA256?**  
+A: Yes! Each model is handled independently.
+
+**Q: What happens if SHA256 is wrong?**  
+A: The file is deleted and re-downloaded automatically.
+
+**Q: What happens if SHA256 is an empty string `""`?**  
+A: ⚠️ It will be treated as a hash to verify (which always fails). Either remove the field entirely or add the real hash.
+
+**Q: Which manifest format should I use?**  
+A: Use the full format with all fields for production; use minimal format for quick testing.
 
 ## Model Types and Folders
 

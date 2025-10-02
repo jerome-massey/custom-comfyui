@@ -48,8 +48,17 @@ EXPOSE 8188 8888
 
 # Create startup script to run both ComfyUI and JupyterLab
 RUN echo '#!/bin/bash\n\
-jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token="" --NotebookApp.password="" &\n\
-python main.py --listen 0.0.0.0 --port 8188\n\
+set -e\n\
+echo "Starting JupyterLab on port 8888..."\n\
+jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token="" --NotebookApp.password="" > /tmp/jupyter.log 2>&1 &\n\
+JUPYTER_PID=$!\n\
+sleep 2\n\
+if ! kill -0 $JUPYTER_PID 2>/dev/null; then\n\
+    echo "ERROR: JupyterLab failed to start. Check /tmp/jupyter.log"\n\
+    cat /tmp/jupyter.log\n\
+fi\n\
+echo "Starting ComfyUI on port 8188..."\n\
+exec python main.py --listen 0.0.0.0 --port 8188\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 # Start both services

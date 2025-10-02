@@ -1,0 +1,42 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+/tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backups
+*.backup
+*.bak
+*.old
+
+# Docker
+.dockerignore.swp
+
+# Debug bind mount directory
+comfyui-data/
+
+# Model files (if accidentally copied to project root)
+*.ckpt
+*.safetensors
+*.pt
+*.pth
+*.bin
